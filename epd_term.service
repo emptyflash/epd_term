@@ -1,0 +1,10 @@
+[Unit]
+Description=E-Paper Display Term
+
+[Service]
+ExecStart=/home/cameron/epd_term/venv/bin/python /home/cameron/epd_term/epd_term.py
+Type=simple
+Restart=always
+
+[Install]
+WantedBy=multi-user.target
