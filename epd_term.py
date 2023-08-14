@@ -50,8 +50,6 @@ signal.signal(signal.SIGUSR1, sigusr1_handler)
 old_buff = None
 old_image = image
 while True:
-    image = Image.new('1', (epd.height, epd.width), 255)  # 255: clear the frame
-    draw = ImageDraw.Draw(image)
     with open("/dev/vcsa1", 'rb') as f:
         attributes = f.read(4)
     with open("/dev/vcs1", "rb") as vcsu:
@@ -61,25 +59,28 @@ while True:
     buff = split(buff, cols * character_width)[-tty_height:]
     buff = ''.join([r.decode('latin_1', 'replace') + '\n' for r in buff])
 
-    draw.rectangle((0, 0, epd.height, epd.width), fill=255)
-    draw.text((0,0), buff, font=font, fill=0)
+    if old_buff != buff:
+        old_buff = buff
+        image = Image.new('1', (epd.height, epd.width), 255)  # 255: clear the frame
+        draw = ImageDraw.Draw(image)
+        draw.rectangle((0, 0, epd.height, epd.width), fill=255)
+        draw.text((0,0), buff, font=font, fill=0)
 
-    # TODO generalize this to different sizes and cursors
-    adj_font_height = font_height + 4
-    upper_left = (cur_x * font_width - 1, cur_y * adj_font_height - 2)
-    lower_right = ((cur_x + 1) * font_width - 1, (cur_y + 1) * adj_font_height - 2)
-    mask = Image.new('1', (image.width, image.height), 0)
-    draw = ImageDraw.Draw(mask)
-    draw.rectangle([upper_left, lower_right], fill=255)
-    image = ImageChops.logical_xor(image, mask)
+        # TODO generalize this to different sizes and cursors
+        adj_font_height = font_height + 4
+        upper_left = (cur_x * font_width - 1, cur_y * adj_font_height - 2)
+        lower_right = ((cur_x + 1) * font_width - 1, (cur_y + 1) * adj_font_height - 2)
+        mask = Image.new('1', (image.width, image.height), 0)
+        draw = ImageDraw.Draw(mask)
+        draw.rectangle([upper_left, lower_right], fill=255)
+        image = ImageChops.logical_xor(image, mask)
 
-    image = image.transpose(Image.FLIP_TOP_BOTTOM)
-    image = image.transpose(Image.FLIP_LEFT_RIGHT)
-    if old_buff is None:
-        epd.displayPartBaseImage(epd.getbuffer(image))
-    elif ImageChops.difference(image, old_image).getbbox():
-        epd.displayPartial(epd.getbuffer(image))
+        image = image.transpose(Image.FLIP_TOP_BOTTOM)
+        image = image.transpose(Image.FLIP_LEFT_RIGHT)
+        if old_buff is None:
+            epd.displayPartBaseImage(epd.getbuffer(image))
+        elif ImageChops.difference(image, old_image).getbbox():
+            epd.displayPartial(epd.getbuffer(image))
+        old_image = image
     else:
         time.sleep(0.1)
-    old_buff = buff
-    old_image = image
